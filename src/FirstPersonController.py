@@ -30,6 +30,8 @@ class FirstPersonController(Entity):
         self.direction = Vec3(0,0,0)
         self.velocity = Vec3(0,0,0)
 
+        self.traverse_target = scene     # by default, it will collide with everything. change this to change the raycasts' traverse targets.
+        self.ignore_list = [self, ]
         self.collider="capsule"
 
         self.trav = CollisionTraverser()
@@ -45,7 +47,7 @@ class FirstPersonController(Entity):
 
         # make sure we don't fall through the ground if we start inside it
         if self.gravity:
-            ray = raycast(self.world_position+Vec3(0,self.height,0), self.down, ignore=(self,))
+            ray = raycast(self.world_position+(0,self.height,0), self.down, traverse_target=self.traverse_target, ignore=self.ignore_list)
             if ray.hit:
                 self.y = ray.world_point.y
 
@@ -65,11 +67,11 @@ class FirstPersonController(Entity):
 
         self.position += self.velocity * time.dt
 
-        self.trav.traverse(scene)
+        self.trav.traverse(self.traverse_target)
 
         # gravity
         if self.gravity:
-            ray = raycast(self.world_position+Vec3(0,self.height,0), self.down, ignore=(self,))
+            ray = raycast(self.world_position+Vec3(0,self.height,0), self.down, traverse_target=self.traverse_target, ignore=self.ignore_list)
 
             if ray.distance <= self.height+.1:
                 self.air_time = 0
