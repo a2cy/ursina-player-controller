@@ -1,1 +1,1 @@
-First person controller made with panda3d's CollisionHandlerPusher
+Player controllers made for the ursina game engine
