@@ -192,7 +192,7 @@ class Player(Entity):
 
     def input(self, key):
         if key == "space":
-            if self.grounded:
+            if self.grounded and not self.noclip_mode:
                 self.velocity.y += self.jump_height / self.gravity
 
 
@@ -226,5 +226,8 @@ if __name__ == "__main__":
     def input(key):
         if key == "escape":
             mouse.locked = not mouse.locked
+
+        if key == "k":
+            player.noclip_mode = not player.noclip_mode
 
     app.run()
