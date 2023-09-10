@@ -1,8 +1,9 @@
 from ursina import *
+from panda3d.core import PerlinNoise2
 
 
 class AABB:
-    def __init__(self, position: Vec3, shape: list):
+    def __init__(self, position, shape):
         self.position = position
         self.shape = shape
 
@@ -48,18 +49,19 @@ class Player(Entity):
 
     def __init__(self, colliders, **kwargs):
         super().__init__()
-        self.speed = 6
+
+        self.walk_speed = 6
+        self.fall_speed = 32
+        self.gravity = 2
         self.acceleration = 16
-        self.gravity = 3.4
-        self.jump_height = 1.4
+        self.jump_height = 1
 
         self.noclip_speed = 8
         self.noclip_acceleration = 6
+        self.noclip_mode = True
 
         self.colliders = colliders
-        self.aabb_collider = AABB(self.position, [-.5, -1.5, -.5,  .5, .4, .5])
-
-        self.noclip_mode = False
+        self.aabb_collider = AABB(self.position, [-.4, -1.5, -.4,  .4, .4, .4])
 
         self.camera_pivot = Entity(parent=self)
         camera.parent = self.camera_pivot
@@ -69,14 +71,13 @@ class Player(Entity):
         self.mouse_sensitivity = 80
 
         self.grounded = False
-        self.airtime = 0
         self.direction = Vec3(0,0,0)
         self.velocity = Vec3(0,0,0)
 
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    
+
     def aabb_broadphase(self, collider_1, collider_2, direction):
         x_1 = min(collider_1.x_1, collider_1.x_1 + direction.x)
         y_1 = min(collider_1.y_1, collider_1.y_1 + direction.y)
@@ -86,37 +87,33 @@ class Player(Entity):
         y_2 = max(collider_1.y_2, collider_1.y_2 + direction.y)
         z_2 = max(collider_1.z_2, collider_1.z_2 + direction.z)
 
-        return not (x_2 < collider_2.x_1 or
-                    x_1 > collider_2.x_2 or
-                    y_2 < collider_2.y_1 or
-                    y_1 > collider_2.y_2 or
-                    z_2 < collider_2.z_1 or
-                    z_1 > collider_2.z_2)
+        return (x_1 < collider_2.x_2 and x_2 > collider_2.x_1 and
+                y_1 < collider_2.y_2 and y_2 > collider_2.y_1 and
+                z_1 < collider_2.z_2 and z_2 > collider_2.z_1)
 
 
     def swept_aabb(self, collider_1, collider_2, direction):
-        x_inv_entry = collider_2.x_1 - collider_1.x_2 if direction.x > 0 else collider_2.x_2 - collider_1.x_1
-        x_inv_exit = collider_2.x_2 - collider_1.x_1 if direction.x > 0 else collider_2.x_1 - collider_1.x_2
+        get_time = lambda x, y: x / y if y else float("-" * (x > 0) + "inf")
 
-        y_inv_entry = collider_2.y_1 - collider_1.y_2 if direction.y > 0 else collider_2.y_2 - collider_1.y_1
-        y_inv_exit = collider_2.y_2 - collider_1.y_1 if direction.y > 0 else collider_2.y_1 - collider_1.y_2
+        x_entry = get_time(collider_2.x_1 - collider_1.x_2 if direction.x > 0 else collider_2.x_2 - collider_1.x_1, direction.x)
+        x_exit = get_time(collider_2.x_2 - collider_1.x_1 if direction.x > 0 else collider_2.x_1 - collider_1.x_2, direction.x)
 
-        z_inv_entry = collider_2.z_1 - collider_1.z_2 if direction.z > 0 else collider_2.z_2 - collider_1.z_1
-        z_inv_exit = collider_2.z_2 - collider_1.z_1 if direction.z > 0 else collider_2.z_1 - collider_1.z_2
+        y_entry = get_time(collider_2.y_1 - collider_1.y_2 if direction.y > 0 else collider_2.y_2 - collider_1.y_1, direction.y)
+        y_exit = get_time(collider_2.y_2 - collider_1.y_1 if direction.y > 0 else collider_2.y_1 - collider_1.y_2, direction.y)
 
-        x_entry = -inf if direction.x == 0 else x_inv_entry / direction.x
-        x_exit = inf if direction.x == 0 else x_inv_exit / direction.x
+        z_entry = get_time(collider_2.z_1 - collider_1.z_2 if direction.z > 0 else collider_2.z_2 - collider_1.z_1, direction.z)
+        z_exit = get_time(collider_2.z_2 - collider_1.z_1 if direction.z > 0 else collider_2.z_1 - collider_1.z_2, direction.z)
 
-        y_entry = -inf if direction.y == 0 else y_inv_entry / direction.y
-        y_exit = inf if direction.y == 0 else y_inv_exit / direction.y
+        if x_entry < 0 and y_entry < 0 and z_entry < 0:
+            return 1, Vec3(0, 0, 0)
 
-        z_entry = -inf if direction.z == 0 else z_inv_entry / direction.z
-        z_exit = inf if direction.z == 0 else z_inv_exit / direction.z
+        if x_entry > 1 or y_entry > 1 or z_entry > 1:
+            return 1, Vec3(0, 0, 0)
 
-        entry_time = max([x_entry, y_entry, z_entry])
-        exit_time = min([x_exit, y_exit, z_exit])
+        entry_time = max(x_entry, y_entry, z_entry)
+        exit_time = min(x_exit, y_exit, z_exit)
 
-        if entry_time > exit_time or x_entry < 0 and y_entry < 0 and z_entry < 0 or x_entry > 1 or y_entry > 1 or z_entry > 1:
+        if entry_time > exit_time:
             return 1, Vec3(0, 0, 0)
 
         normal_x = (0, -1 if direction.x > 0 else 1)[entry_time == x_entry]
@@ -133,38 +130,50 @@ class Player(Entity):
             self.camera_pivot.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity
             self.camera_pivot.rotation_x = clamp(self.camera_pivot.rotation_x, -90, 90)
 
-            self.direction = Vec3(self.camera_pivot.forward * (held_keys["w"] - held_keys["s"])
+            self.direction = Vec3(self.forward * (held_keys["w"] - held_keys["s"])
                                   + self.right * (held_keys["d"] - held_keys["a"])).normalized()
 
             self.direction += self.up * (held_keys["e"] - held_keys["q"])
 
-            self.velocity = lerp(self.velocity, self.direction * self.noclip_speed * time.dt, self.noclip_acceleration * time.dt)
+            self.velocity = lerp(self.velocity, self.direction * self.noclip_speed, self.noclip_acceleration * time.dt)
 
-            self.position += self.velocity
-        
+            self.position += self.velocity * time.dt
+
         else:
             self.rotation_y += mouse.velocity[0] * self.mouse_sensitivity
 
             self.camera_pivot.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity
             self.camera_pivot.rotation_x = clamp(self.camera_pivot.rotation_x, -90, 90)
 
+            if self.grounded and held_keys["space"]:
+                self.velocity.y = 2 * (self.fall_speed * self.gravity * self.jump_height)**.5
+
             self.direction = Vec3(self.forward * (held_keys["w"] - held_keys["s"])
                                   + self.right * (held_keys["d"] - held_keys["a"])).normalized()
-            
-            self.airtime += time.dt
 
-            self.direction.y -= self.gravity * self.airtime
+            self.velocity.xz = lerp(self.velocity, self.direction * self.walk_speed, self.acceleration * time.dt).xz
+            self.velocity.y = lerp(self.velocity.y, -self.fall_speed, self.gravity * time.dt)
 
-            self.velocity = lerp(self.velocity, self.direction * self.speed * time.dt, self.acceleration * time.dt)
-
-            self.aabb_collider.position = self.position
+            self.grounded = False
 
             for _ in range(3):
+                velocity = self.velocity * time.dt
                 collisions = []
 
-                for collider in self.colliders:
-                    if self.aabb_broadphase(self.aabb_collider, collider, self.velocity):
-                        collision_time, collision_normal = self.swept_aabb(self.aabb_collider, collider, self.velocity)
+                for i in range(3 * 3 * 4):
+                    offset = Vec3(i // 3 // 4 - 1,
+                                  i // 3 % 4 - 2,
+                                  i % 3 % 4 - 1)
+
+                    position = round(self.position + velocity + offset, ndigits=0)
+
+                    if not tuple(position) in colliders:
+                        continue
+
+                    collider = AABB(position, [-.5, -.5, -.5,  .5, .5, .5])
+
+                    if self.aabb_broadphase(self.aabb_collider, collider, velocity):
+                        collision_time, collision_normal = self.swept_aabb(self.aabb_collider, collider, velocity)
 
                         collisions.append((collision_time, collision_normal))
 
@@ -172,28 +181,26 @@ class Player(Entity):
                     break
 
                 collision_time, collision_normal = min(collisions, key= lambda x: x[0])
+                collision_time -= .0001
 
-                remaining_time = 1 - collision_time
+                if collision_normal.x:
+                    self.velocity.x = 0
+                    self.position.x += velocity.x * collision_time
 
-                response = self.velocity - self.velocity.project(collision_normal)
-                response = Vec3.zero if response.is_nan() else response * remaining_time
+                if collision_normal.y:
+                    self.velocity.y = 0
+                    self.position.y += velocity.y * collision_time
 
-                self.velocity = self.velocity * collision_time + response
+                if collision_normal.z:
+                    self.velocity.z = 0
+                    self.position.z += velocity.z * collision_time
 
-            if self.velocity.y == 0:
-                self.grounded = True
-                self.airtime = 0
+                if collision_normal.y == 1:
+                    self.grounded = True
 
-            else:
-                self.grounded = False
+            self.position += self.velocity * time.dt
 
-            self.position += self.velocity
-
-
-    def input(self, key):
-        if key == "space":
-            if self.grounded and not self.noclip_mode:
-                self.velocity.y += self.jump_height / self.gravity
+            self.aabb_collider.position = self.position
 
 
     def on_enable(self):
@@ -207,27 +214,40 @@ class Player(Entity):
 if __name__ == "__main__":
     app = Ursina(borderless=False)
 
+    noise = PerlinNoise2()
+
+    size = 15
+    amp = 16
+    freq = 32
     colliders = []
 
-    box_1 = Entity(model="cube", texture="brick", position=Vec3(4, 3, 0), scale=Vec3(2, 1, 3), texture_scale=Vec2(2, 3))
-    box_2 = Entity(model="cube", texture="brick", position=Vec3(3, 1.5, 0), scale=Vec3(1, 2, 3), texture_scale=Vec2(2, 3))
-    box_3 = Entity(model="cube", texture="grass", position=Vec3(0, 0, 0), scale=Vec3(25, 1, 25), texture_scale=Vec2(25, 25))
-    box_4 = Entity(model="cube", texture="brick", position=Vec3(-2, 1.5, 0), scale=Vec3(2, 2, 2), texture_scale=Vec2(2, 2))
+    for i in range(size**2):
+        x = i//size - (size - 1) / 2
+        z = i%size - (size - 1) / 2
+        y = int(noise(x/freq, z/freq) * amp - amp * 2)
 
-    collider_1 = AABB(box_1.position, [-1, -.5, -1.5,  1, .5, 1.5])
-    collider_2 = AABB(box_2.position, [-.5, -1, -1.5,  .5, 1, 1.5])
-    collider_3 = AABB(box_3.position, [-12.5, -.5, -12.5,  12.5, .5, 12.5])
-    collider_4 = AABB(box_4.position, [-1, -1, -1,  1, 1, 1])
+        position = Vec3(x, y, z)
+        box = Entity(model="cube", texture="brick", position=position)
 
-    colliders.extend([collider_1, collider_2, collider_3, collider_4])
+        colliders.append(tuple(position))
 
-    player = Player(colliders, position=Vec3(0, 5, 0))
+    player = Player(colliders, position=Vec3(0, 0, 0))
+    position_display = Text(parent=camera.ui,
+                             position=window.top_left,
+                             origin=Vec2(-0.5, 0.5),
+                             text="")
+
 
     def input(key):
         if key == "escape":
             mouse.locked = not mouse.locked
 
-        if key == "k":
+        if key == "n":
             player.noclip_mode = not player.noclip_mode
+
+
+    def update():
+        position_display.text = f"{player.position}"
+
 
     app.run()
