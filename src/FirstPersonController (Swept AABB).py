@@ -3,46 +3,47 @@ from panda3d.core import PerlinNoise2
 
 
 class AABB:
-    def __init__(self, position, shape):
+    def __init__(self, position, origin, scale):
         self.position = position
-        self.shape = shape
+        self.origin = origin
+        self.scale = scale
 
 
     @property
     def x(self):
-        return self.position.x
+        return self.position.x + self.origin.x
 
     @property
     def y(self):
-        return self.position.y
+        return self.position.y + self.origin.y
 
     @property
     def z(self):
-        return self.position.z
+        return self.position.z + self.origin.z
 
     @property
     def x_1(self):
-        return self.shape[0] + self.position.x
+        return self.position.x + self.origin.x - self.scale.x / 2
 
     @property
     def y_1(self):
-        return self.shape[1] + self.position.y
+        return self.position.y + self.origin.y - self.scale.y / 2
 
     @property
     def z_1(self):
-        return self.shape[2] + self.position.z
+        return self.position.z + self.origin.z - self.scale.z / 2
 
     @property
     def x_2(self):
-        return self.shape[3] + self.position.x
-    
+        return self.position.x + self.origin.x + self.scale.x / 2
+
     @property
     def y_2(self):
-        return self.shape[4] + self.position.y
-    
+        return self.position.y + self.origin.y + self.scale.y / 2
+
     @property
     def z_2(self):
-        return self.shape[5] + self.position.z
+        return self.position.z + self.origin.z + self.scale.z / 2
 
 
 class Player(Entity):
@@ -61,7 +62,7 @@ class Player(Entity):
         self.noclip_mode = True
 
         self.colliders = colliders
-        self.aabb_collider = AABB(self.position, [-.4, -1.5, -.4,  .4, .4, .4])
+        self.aabb_collider = AABB(self.position, Vec3(0, -.8, 0), Vec3(.8, 1.8, .8))
 
         self.camera_pivot = Entity(parent=self)
         camera.parent = self.camera_pivot
@@ -160,18 +161,7 @@ class Player(Entity):
                 velocity = self.velocity * time.dt
                 collisions = []
 
-                for i in range(3 * 3 * 4):
-                    offset = Vec3(i // 3 // 4 - 1,
-                                  i // 3 % 4 - 2,
-                                  i % 3 % 4 - 1)
-
-                    position = round(self.position + velocity + offset, ndigits=0)
-
-                    if not tuple(position) in colliders:
-                        continue
-
-                    collider = AABB(position, [-.5, -.5, -.5,  .5, .5, .5])
-
+                for collider in self.colliders:
                     if self.aabb_broadphase(self.aabb_collider, collider, velocity):
                         collision_time, collision_normal = self.swept_aabb(self.aabb_collider, collider, velocity)
 
@@ -216,22 +206,28 @@ if __name__ == "__main__":
 
     noise = PerlinNoise2()
 
-    size = 15
-    amp = 16
-    freq = 32
-    colliders = []
+    ground = Entity(model="plane", texture="grass", scale=Vec3(1000, 1, 1000), texture_scale=Vec2(1000, 1000))
+    ground_collider = AABB(Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(1000, 1, 1000))
 
-    for i in range(size**2):
-        x = i//size - (size - 1) / 2
-        z = i%size - (size - 1) / 2
-        y = int(noise(x/freq, z/freq) * amp - amp * 2)
+    wall_1 = Entity(model="cube", texture="brick", collider="box", scale=Vec3(1, 3, 5), position=Vec3(5, 1.5, 0), texture_scale=Vec2(5, 3))
+    wall_1_collider = AABB(Vec3(5, 1.5, 0), Vec3(0, 0, 0), Vec3(1, 3, 5))
 
-        position = Vec3(x, y, z)
-        box = Entity(model="cube", texture="brick", position=position)
+    wall_2 = Entity(model="cube", texture="brick", collider="box", scale=Vec3(1, 3, 5), position=Vec3(-5, 1.5, 0), texture_scale=Vec2(5, 3))
+    wall_2_collider = AABB(Vec3(-5, 1.5, 0), Vec3(0, 0, 0), Vec3(1, 3, 5))
 
-        colliders.append(tuple(position))
+    wall_3 = Entity(model="cube", texture="brick", collider="box", scale=Vec3(5, 3, 1), position=Vec3(0, 1.5, 5), texture_scale=Vec2(5, 3))
+    wall_3_collider = AABB(Vec3(0, 1.5, 5), Vec3(0, 0, 0), Vec3(5, 3, 1))
 
-    player = Player(colliders, position=Vec3(0, 0, 0))
+    wall_4 = Entity(model="cube", texture="brick", collider="box", scale=Vec3(5, 3, 1), position=Vec3(0, 1.5, -5), texture_scale=Vec2(5, 3))
+    wall_4_collider = AABB(Vec3(0, 1.5, -5), Vec3(0, 0, 0), Vec3(5, 3, 1))
+
+    ceiling = Entity(model="cube", texture="brick", scale=Vec3(11, 1, 11), position=Vec3(0, 3.5, 0), texture_scale=Vec2(11, 11))
+    ceiling_collider = AABB(Vec3(0, 3.5, 0), Vec3(0, 0, 0), Vec3(11, 1, 11))
+
+    colliders = [ground_collider, wall_1_collider, wall_2_collider, wall_3_collider, wall_4_collider, ceiling_collider]
+
+    player = Player(colliders, position=Vec3(0, 2.5, 0))
+
     position_display = Text(parent=camera.ui,
                              position=window.top_left,
                              origin=Vec2(-0.5, 0.5),
