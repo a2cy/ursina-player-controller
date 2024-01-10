@@ -1,5 +1,4 @@
 from ursina import *
-from panda3d.core import PerlinNoise2
 
 
 class AABB:
@@ -59,7 +58,7 @@ class Player(Entity):
 
         self.noclip_speed = 8
         self.noclip_acceleration = 6
-        self.noclip_mode = True
+        self.noclip_mode = False
 
         self.colliders = colliders
         self.aabb_collider = AABB(self.position, Vec3(0, -.8, 0), Vec3(.8, 1.8, .8))
@@ -131,7 +130,7 @@ class Player(Entity):
             self.camera_pivot.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity
             self.camera_pivot.rotation_x = clamp(self.camera_pivot.rotation_x, -90, 90)
 
-            self.direction = Vec3(self.camera_pivot.forward * (held_keys["w"] - held_keys["s"])
+            self.direction = Vec3(self.forward * (held_keys["w"] - held_keys["s"])
                                   + self.right * (held_keys["d"] - held_keys["a"])).normalized()
 
             self.direction += self.up * (held_keys["e"] - held_keys["q"])
@@ -154,6 +153,8 @@ class Player(Entity):
 
             self.velocity.xz = lerp(self.velocity, self.direction * self.walk_speed, self.acceleration * time.dt).xz
             self.velocity.y = lerp(self.velocity.y, -self.fall_speed, self.gravity * time.dt)
+
+            self.aabb_collider.position = self.position
 
             self.grounded = False
 
@@ -190,8 +191,6 @@ class Player(Entity):
 
             self.position += self.velocity * time.dt
 
-            self.aabb_collider.position = self.position
-
 
     def on_enable(self):
         mouse.locked = True
@@ -203,8 +202,6 @@ class Player(Entity):
 
 if __name__ == "__main__":
     app = Ursina(borderless=False)
-
-    noise = PerlinNoise2()
 
     ground = Entity(model="plane", texture="grass", scale=Vec3(1000, 1, 1000), texture_scale=Vec2(1000, 1000))
     ground_collider = AABB(Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(1000, 1, 1000))
@@ -228,11 +225,6 @@ if __name__ == "__main__":
 
     player = Player(colliders, position=Vec3(0, 2.5, 0))
 
-    position_display = Text(parent=camera.ui,
-                             position=window.top_left,
-                             origin=Vec2(-0.5, 0.5),
-                             text="")
-
 
     def input(key):
         if key == "escape":
@@ -240,10 +232,6 @@ if __name__ == "__main__":
 
         if key == "n":
             player.noclip_mode = not player.noclip_mode
-
-
-    def update():
-        position_display.text = f"{player.position}"
 
 
     app.run()
