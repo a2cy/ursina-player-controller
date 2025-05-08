@@ -26,7 +26,7 @@ class AABBCollider:
         self.z_2 = value.z + self._origin.z + self._scale.z / 2
 
 
-    def intersects(self, collider):
+    def intersect(self, collider):
         return (self.x_1 < collider.x_2 and self.x_2 > collider.x_1 and
                 self.y_1 < collider.y_2 and self.y_2 > collider.y_1 and
                 self.z_1 < collider.z_2 and self.z_2 > collider.z_1)
