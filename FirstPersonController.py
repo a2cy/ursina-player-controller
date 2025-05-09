@@ -105,6 +105,8 @@ class Player(Entity):
 
 
     def update(self):
+        floor_2d = lambda x: int(x * 100) / 100
+
         self.rotation_y += mouse.velocity[0] * self.mouse_sensitivity
 
         self.camera_pivot.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity
@@ -156,19 +158,18 @@ class Player(Entity):
                     break
 
                 collision_time, normal = min(collisions, key=lambda x: x[0])
-                collision_time *= 0.5
 
                 if normal.x:
                     self.velocity.x = 0
-                    move_delta.x = move_delta.x * collision_time
+                    move_delta.x = floor_2d(move_delta.x * collision_time)
 
                 if normal.y:
                     self.velocity.y = 0
-                    move_delta.y = move_delta.y * collision_time
+                    move_delta.y = floor_2d(move_delta.y * collision_time)
 
                 if normal.z:
                     self.velocity.z = 0
-                    move_delta.z = move_delta.z * collision_time
+                    move_delta.z = floor_2d(move_delta.z * collision_time)
 
                 if normal.y == 1:
                     self.grounded = True
