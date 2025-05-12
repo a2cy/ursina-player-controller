@@ -32,25 +32,25 @@ class AABBCollider:
                 self.z_1 < collider.z_2 and self.z_2 > collider.z_1)
 
 
-    def collide(self, collider, direction):
+    def collide(self, collider, move_delta):
         get_time = lambda x, y: x / y if y else float("-" * (x > 0) + "inf")
 
         no_collision = 1, None
 
-        x_entry = get_time(collider.x_1 - self.x_2 if direction.x > 0 \
-                           else collider.x_2 - self.x_1, direction.x)
-        x_exit = get_time(collider.x_2 - self.x_1 if direction.x > 0 \
-                          else collider.x_1 - self.x_2, direction.x)
+        x_entry = get_time(collider.x_1 - self.x_2 if move_delta.x > 0 \
+                           else collider.x_2 - self.x_1, move_delta.x)
+        x_exit = get_time(collider.x_2 - self.x_1 if move_delta.x > 0 \
+                          else collider.x_1 - self.x_2, move_delta.x)
 
-        y_entry = get_time(collider.y_1 - self.y_2 if direction.y > 0 \
-                           else collider.y_2 - self.y_1, direction.y)
-        y_exit = get_time(collider.y_2 - self.y_1 if direction.y > 0 \
-                          else collider.y_1 - self.y_2, direction.y)
+        y_entry = get_time(collider.y_1 - self.y_2 if move_delta.y > 0 \
+                           else collider.y_2 - self.y_1, move_delta.y)
+        y_exit = get_time(collider.y_2 - self.y_1 if move_delta.y > 0 \
+                          else collider.y_1 - self.y_2, move_delta.y)
 
-        z_entry = get_time(collider.z_1 - self.z_2 if direction.z > 0 \
-                           else collider.z_2 - self.z_1, direction.z)
-        z_exit = get_time(collider.z_2 - self.z_1 if direction.z > 0 \
-                          else collider.z_1 - self.z_2, direction.z)
+        z_entry = get_time(collider.z_1 - self.z_2 if move_delta.z > 0 \
+                           else collider.z_2 - self.z_1, move_delta.z)
+        z_exit = get_time(collider.z_2 - self.z_1 if move_delta.z > 0 \
+                          else collider.z_1 - self.z_2, move_delta.z)
 
         if x_entry < 0 and y_entry < 0 and z_entry < 0:
             return no_collision
@@ -64,9 +64,9 @@ class AABBCollider:
         if entry_time > exit_time:
             return no_collision
 
-        normal_x = (0, -1 if direction.x > 0 else 1)[entry_time == x_entry]
-        normal_y = (0, -1 if direction.y > 0 else 1)[entry_time == y_entry]
-        normal_z = (0, -1 if direction.z > 0 else 1)[entry_time == z_entry]
+        normal_x = (0, -1 if move_delta.x > 0 else 1)[entry_time == x_entry]
+        normal_y = (0, -1 if move_delta.y > 0 else 1)[entry_time == y_entry]
+        normal_z = (0, -1 if move_delta.z > 0 else 1)[entry_time == z_entry]
 
         return entry_time, Vec3(normal_x, normal_y, normal_z)
 
