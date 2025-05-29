@@ -1,4 +1,4 @@
-from ursina import *
+from ursina import Entity, Vec3, time, held_keys, camera, mouse, lerp, clamp
 
 
 class AABBCollider:
@@ -190,6 +190,8 @@ class Player(Entity):
 
 
 if __name__ == "__main__":
+    from ursina import Ursina, Vec2
+
     app = Ursina(borderless=False)
 
     ground = Entity(model="plane", texture="grass", scale=Vec3(100, 1, 100), texture_scale=Vec2(100, 100))
