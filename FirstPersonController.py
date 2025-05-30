@@ -4,7 +4,7 @@ from ursina import Entity, Vec3, time, held_keys, camera, mouse, lerp, clamp
 class AABBCollider:
 
     def __init__(self, position, origin, scale):
-        self._scale = scale
+        self._half_scale = scale / 2
         self._origin = origin
         self.position = position
 
@@ -17,13 +17,13 @@ class AABBCollider:
     def position(self, value):
         self._position = value
 
-        self.x_1 = value.x + self._origin.x - self._scale.x / 2
-        self.y_1 = value.y + self._origin.y - self._scale.y / 2
-        self.z_1 = value.z + self._origin.z - self._scale.z / 2
+        self.x_1 = value.x + self._origin.x - self._half_scale.x
+        self.y_1 = value.y + self._origin.y - self._half_scale.y
+        self.z_1 = value.z + self._origin.z - self._half_scale.z
 
-        self.x_2 = value.x + self._origin.x + self._scale.x / 2
-        self.y_2 = value.y + self._origin.y + self._scale.y / 2
-        self.z_2 = value.z + self._origin.z + self._scale.z / 2
+        self.x_2 = value.x + self._origin.x + self._half_scale.x
+        self.y_2 = value.y + self._origin.y + self._half_scale.y
+        self.z_2 = value.z + self._origin.z + self._half_scale.z
 
 
     def intersect(self, collider):
