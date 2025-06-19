@@ -35,34 +35,20 @@ class AABBCollider:
     def collide(self, collider, move_delta):
         get_time = lambda x, y: x / y if y else float("-" * (x > 0) + "inf")
 
-        no_collision = 1, None
+        x_entry = get_time(collider.x_1 - self.x_2 if move_delta.x > 0 else collider.x_2 - self.x_1, move_delta.x)
+        x_exit = get_time(collider.x_2 - self.x_1 if move_delta.x > 0 else collider.x_1 - self.x_2, move_delta.x)
 
-        x_entry = get_time(collider.x_1 - self.x_2 if move_delta.x > 0 \
-                           else collider.x_2 - self.x_1, move_delta.x)
-        x_exit = get_time(collider.x_2 - self.x_1 if move_delta.x > 0 \
-                          else collider.x_1 - self.x_2, move_delta.x)
+        y_entry = get_time(collider.y_1 - self.y_2 if move_delta.y > 0 else collider.y_2 - self.y_1, move_delta.y)
+        y_exit = get_time(collider.y_2 - self.y_1 if move_delta.y > 0 else collider.y_1 - self.y_2, move_delta.y)
 
-        y_entry = get_time(collider.y_1 - self.y_2 if move_delta.y > 0 \
-                           else collider.y_2 - self.y_1, move_delta.y)
-        y_exit = get_time(collider.y_2 - self.y_1 if move_delta.y > 0 \
-                          else collider.y_1 - self.y_2, move_delta.y)
-
-        z_entry = get_time(collider.z_1 - self.z_2 if move_delta.z > 0 \
-                           else collider.z_2 - self.z_1, move_delta.z)
-        z_exit = get_time(collider.z_2 - self.z_1 if move_delta.z > 0 \
-                          else collider.z_1 - self.z_2, move_delta.z)
-
-        if x_entry < 0 and y_entry < 0 and z_entry < 0:
-            return no_collision
-
-        if x_entry > 1 or y_entry > 1 or z_entry > 1:
-            return no_collision
+        z_entry = get_time(collider.z_1 - self.z_2 if move_delta.z > 0 else collider.z_2 - self.z_1, move_delta.z)
+        z_exit = get_time(collider.z_2 - self.z_1 if move_delta.z > 0 else collider.z_1 - self.z_2, move_delta.z)
 
         entry_time = max(x_entry, y_entry, z_entry)
         exit_time = min(x_exit, y_exit, z_exit)
 
-        if entry_time > exit_time:
-            return no_collision
+        if entry_time > exit_time or entry_time > 1 or entry_time < 0:
+            return 1, None
 
         normal_x = (0, -1 if move_delta.x > 0 else 1)[entry_time == x_entry]
         normal_y = (0, -1 if move_delta.y > 0 else 1)[entry_time == y_entry]
@@ -105,8 +91,6 @@ class Player(Entity):
 
 
     def update(self):
-        floor_2d = lambda x: int(x * 100) / 100
-
         self.rotation_y += mouse.velocity[0] * self.mouse_sensitivity
 
         self.camera_pivot.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity
@@ -162,15 +146,15 @@ class Player(Entity):
 
                 if normal.x:
                     self.velocity.x = 0
-                    move_delta.x = floor_2d(move_delta.x * collision_time)
+                    move_delta.x = 0
 
                 if normal.y:
                     self.velocity.y = 0
-                    move_delta.y = floor_2d(move_delta.y * collision_time)
+                    move_delta.y = int(move_delta.y * collision_time * 10000) / 10000
 
                 if normal.z:
                     self.velocity.z = 0
-                    move_delta.z = floor_2d(move_delta.z * collision_time)
+                    move_delta.z = 0
 
                 if normal.y == 1:
                     self.grounded = True
