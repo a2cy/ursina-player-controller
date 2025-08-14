@@ -38,7 +38,7 @@ class AABBCollider:
 
         min_dist = max(x_max, x_min, y_max, y_min, z_max, z_min)
 
-        if min_dist > -0.000001:
+        if min_dist >= 0:
             return 1, None
 
         normal_x = (0, 1, -1, 0)[(min_dist == x_max) + (min_dist == x_min) * 2]
@@ -191,6 +191,7 @@ class Player(Entity):
                     break
 
                 min_dist, normal = min(collisions, key=lambda x: x[0])
+                min_dist += 0.000001
 
                 if normal.x:
                     self.velocity.x = 0
