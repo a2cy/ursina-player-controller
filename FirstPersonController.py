@@ -27,9 +27,25 @@ class AABBCollider:
 
 
     def intersect(self, collider):
-        return (self.x_1 < collider.x_2 and self.x_2 > collider.x_1 and
-                self.y_1 < collider.y_2 and self.y_2 > collider.y_1 and
-                self.z_1 < collider.z_2 and self.z_2 > collider.z_1)
+        x_max = self.x_1 - collider.x_2
+        x_min = collider.x_1 - self.x_2
+
+        y_max = self.y_1 - collider.y_2
+        y_min = collider.y_1 - self.y_2
+
+        z_max = self.z_1 - collider.z_2
+        z_min = collider.z_1 - self.z_2
+
+        min_dist = max(x_max, x_min, y_max, y_min, z_max, z_min)
+
+        if min_dist > -0.000001:
+            return 1, None
+
+        normal_x = (0, 1, -1, 0)[(min_dist == x_max) + (min_dist == x_min) * 2]
+        normal_y = (0, 1, -1, 0)[(min_dist == y_max) + (min_dist == y_min) * 2]
+        normal_z = (0, 1, -1, 0)[(min_dist == z_max) + (min_dist == z_min) * 2]
+
+        return -min_dist, Vec3(normal_x, normal_y, normal_z)
 
 
     def collide(self, collider, move_delta):
@@ -125,11 +141,11 @@ class Player(Entity):
             self.velocity.y = max(self.velocity.y, -self.max_fall_speed)
 
             self.grounded = False
-            self.player_collider.position = self.position
             move_delta = self.velocity * time.dt
 
             for _ in range(3):
                 collisions = []
+                self.player_collider.position = self.position
 
                 for collider in self.colliders:
                     collision_time, normal = self.player_collider.collide(collider, move_delta)
@@ -146,18 +162,47 @@ class Player(Entity):
 
                 if normal.x:
                     self.velocity.x = 0
-                    move_delta.x = 0
+                    move_delta.x = move_delta.x * collision_time
 
                 if normal.y:
                     self.velocity.y = 0
-                    move_delta.y = int(move_delta.y * collision_time * 10000) / 10000
+                    move_delta.y = move_delta.y * collision_time
 
                 if normal.z:
                     self.velocity.z = 0
-                    move_delta.z = 0
+                    move_delta.z = move_delta.z * collision_time
 
                 if normal.y == 1:
                     self.grounded = True
+
+            for _ in range(3):
+                collisions = []
+                self.player_collider.position = self.position
+
+                for collider in self.colliders:
+                    min_dist, normal = self.player_collider.intersect(collider)
+
+                    if normal is None:
+                        continue
+
+                    collisions.append((min_dist, normal))
+
+                if not collisions:
+                    break
+
+                min_dist, normal = min(collisions, key=lambda x: x[0])
+
+                if normal.x:
+                    self.velocity.x = 0
+                    move_delta.x = min_dist * normal.x
+
+                if normal.y:
+                    self.velocity.y = 0
+                    move_delta.y = min_dist * normal.y
+
+                if normal.z:
+                    self.velocity.z = 0
+                    move_delta.z = min_dist * normal.z
 
             self.position += move_delta
 
