@@ -141,11 +141,11 @@ class Player(Entity):
             self.velocity.y = max(self.velocity.y, -self.max_fall_speed)
 
             self.grounded = False
+            self.player_collider.position = self.position
             move_delta = self.velocity * time.dt
 
             for _ in range(3):
                 collisions = []
-                self.player_collider.position = self.position
 
                 for collider in self.colliders:
                     collision_time, normal = self.player_collider.collide(collider, move_delta)
@@ -175,9 +175,10 @@ class Player(Entity):
                 if normal.y == 1:
                     self.grounded = True
 
+            self.player_collider.position = self.position + move_delta
+
             for _ in range(3):
                 collisions = []
-                self.player_collider.position = self.position
 
                 for collider in self.colliders:
                     min_dist, normal = self.player_collider.intersect(collider)
@@ -191,7 +192,6 @@ class Player(Entity):
                     break
 
                 min_dist, normal = min(collisions, key=lambda x: x[0])
-                min_dist += 0.000001
 
                 if normal.x:
                     self.velocity.x = 0
