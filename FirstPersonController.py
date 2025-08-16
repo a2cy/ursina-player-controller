@@ -175,10 +175,10 @@ class Player(Entity):
                 if normal.y == 1:
                     self.grounded = True
 
-            self.player_collider.position = self.position + move_delta
-
             for _ in range(3):
                 collisions = []
+
+                self.player_collider.position = self.position + move_delta
 
                 for collider in self.colliders:
                     min_dist, normal = self.player_collider.intersect(collider)
@@ -206,8 +206,6 @@ class Player(Entity):
                     move_delta.z = min_dist * normal.z
 
             self.position += move_delta
-
-        self.player_collider.position = self.position
 
 
     def on_enable(self):
