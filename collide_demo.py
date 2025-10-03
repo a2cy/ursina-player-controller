@@ -37,4 +37,5 @@ def input(key):
         moving_box_a.position = Vec3(mouse.x, mouse.y, -0.01)
         moving_collider.position = Vec3(mouse.x, mouse.y, 0.0)
 
+
 app.run()
