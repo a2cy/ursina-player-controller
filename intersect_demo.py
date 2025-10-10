@@ -1,4 +1,4 @@
-from ursina import *
+from ursina import Ursina, Entity, Vec3, color, mouse, camera
 from FirstPersonController import AABBCollider
 
 
