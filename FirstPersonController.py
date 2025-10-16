@@ -2,7 +2,7 @@ from ursina import Entity, Vec3, time, held_keys, camera, mouse, lerp, clamp
 
 
 class AABBCollider:
-    def __init__(self, position: Vec3, origin: Vec3, scale: Vec3) -> None :
+    def __init__(self, position: Vec3, origin: Vec3, scale: Vec3) -> None:
         self._half_scale = scale / 2
         self._origin = origin
         self.position = position
@@ -45,7 +45,7 @@ class AABBCollider:
         return -min_dist, Vec3(normal_x, normal_y, normal_z)
 
     def collide(self, collider, move_delta: Vec3) -> tuple:
-        def get_time(x, y):
+        def get_time(x: float, y: float) -> float:
             return x / y if y else float("-" * (x > 0) + "inf")
 
         x_entry = get_time(collider.x_1 - self.x_2 if move_delta.x > 0 else collider.x_2 - self.x_1, move_delta.x)
@@ -86,7 +86,7 @@ class Player(Entity):
         self.noclip_acceleration = 6
         self.noclip_mode = False
 
-        self.player_collider = AABBCollider(Vec3(0), Vec3(0, -0.6, 0), Vec3(0.8, 1.8, 0.8))
+        self.player_collider = AABBCollider(position=Vec3(0), origin=Vec3(0, -0.6, 0), scale=Vec3(0.8, 1.8, 0.8))
         self.colliders = colliders
 
         self.fov = 90
